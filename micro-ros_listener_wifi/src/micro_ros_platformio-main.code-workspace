@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"name": "micro-ros_publisher_wifi",
+			"path": "../../examples/micro-ros_publisher_wifi"
+		},
+		{
+			"name": "micro-ros_publisher_wifi",
+			"path": ".."
+		},
+		{
+			"name": "micro_ros_wifi_publisher",
+			"path": "../../../Documents/PlatformIO/Projects/micro_ros_wifi_publisher"
+		}
+	],
+	"settings": {}
+}
