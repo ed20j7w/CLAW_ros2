@@ -3,7 +3,9 @@ ROS2 Humble Desktop
 VS Code w/ platformio
 
 OpenRB-150 to control dynamixel motors (XC330-M288-T).
+
 ESP32-Feather V1 (Huzzah32) running Microros for communication over WiFi.
+
 Arduino NiclaVision streaming video to local network port.
 
 Setup:
