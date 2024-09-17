@@ -8,10 +8,10 @@
 // Dynamixal Motor Config
 float DXL_PROTOCOL_VERSION = 2.0;
 int MAX_DRIVE_VELOCITY = 445;
-int MAX_CLAW_VELOCITY = 50;
-int LEFT_DRIVE_ID = 1;
-int LEFT_CLAW_ID = 3;
-int RIGHT_DRIVE_ID = 2;
+int MAX_CLAW_VELOCITY = 445;
+int LEFT_DRIVE_ID = 2;
+int LEFT_CLAW_ID = 1;
+int RIGHT_DRIVE_ID = 3;
 int RIGHT_CLAW_ID = 4;
 
 //This namespace is required to use Control table item names
@@ -28,9 +28,11 @@ class Car{
     uint8_t right_drive_id;
     uint8_t left_claw_id;
     uint8_t right_claw_id;
+    uint8_t claw_presets[4][2];
+    uint8_t claw_preset = 0;
     float max_drive_velocity;
     Vector2int drive_velocity = {0, 0};
-    int max_claw_velocity;
+    float max_claw_velocity;
     Vector2int claw_velocity = {0, 0};
 
     void set_drive_velocity(int linear, int angular){
@@ -55,9 +57,18 @@ class Car{
     }
 
     void set_claw_velocity(int velocity){
-      this->claw_velocity.left = velocity*this->max_claw_velocity;
-      this->claw_velocity.right = velocity*this->max_claw_velocity;
+      this->claw_velocity.left = velocity*this->max_claw_velocity/100;
+      this->claw_velocity.right = velocity*this->max_claw_velocity/100;
+      DEBUG_SERIAL.print("Left claw velocity: ");
+      DEBUG_SERIAL.println(this->claw_velocity.left);
+      DEBUG_SERIAL.print("Right claw velocity: ");
+      DEBUG_SERIAL.println(this->claw_velocity.right);
     }
+
+    // void set_claw_preset(){
+    //   // read claw position
+    //   // save claw value at this->claw_presets[claw_preset]
+    // }
 
   public:
     Car(int max_drive_velocity, uint8_t left_drive_id, uint8_t right_drive_id, 
@@ -95,16 +106,17 @@ class Car{
     }
 
             
-    Vector2int get_drive_velocity(){ return drive_velocity; }
+    Vector2int get_drive_velocity(){ return this->drive_velocity; }
+    Vector2int get_claw_velocity(){ return this->claw_velocity; }
     Vector2int get_drive_id(){ return {this->left_drive_id, this->right_drive_id}; }
+    Vector2int get_claw_id(){ return {this->left_claw_id, this->right_claw_id}; }
 };
 
 // setup dynamixel port
 Dynamixel2Arduino dxl(DXL_SERIAL);
 
 // initialise car
-Car car(MAX_DRIVE_VELOCITY, LEFT_DRIVE_ID, RIGHT_DRIVE_ID, 
-        MAX_CLAW_VELOCITY, LEFT_CLAW_ID, RIGHT_CLAW_ID);
+Car car(MAX_DRIVE_VELOCITY, LEFT_DRIVE_ID, RIGHT_DRIVE_ID, MAX_DRIVE_VELOCITY, LEFT_CLAW_ID, RIGHT_CLAW_ID);
 
 void setup() {
   // Initialize the UART serial communication at 9600 baud rate for ESP32
@@ -124,9 +136,18 @@ void setup() {
   dxl.torqueOff(LEFT_DRIVE_ID);
   dxl.setOperatingMode(LEFT_DRIVE_ID, OP_VELOCITY);
   dxl.torqueOn(LEFT_DRIVE_ID);
+
   dxl.torqueOff(RIGHT_DRIVE_ID);
   dxl.setOperatingMode(RIGHT_DRIVE_ID, OP_VELOCITY);
   dxl.torqueOn(RIGHT_DRIVE_ID);
+
+  dxl.torqueOff(LEFT_CLAW_ID);
+  dxl.setOperatingMode(LEFT_CLAW_ID, OP_VELOCITY);
+  dxl.torqueOn(LEFT_CLAW_ID);
+
+  dxl.torqueOff(RIGHT_CLAW_ID);
+  dxl.setOperatingMode(RIGHT_CLAW_ID, OP_VELOCITY);
+  dxl.torqueOn(RIGHT_CLAW_ID);
 }
 
 void loop() {
@@ -142,6 +163,8 @@ void loop() {
   // Set Goal Velocity RAW value
   dxl.setGoalVelocity(car.get_drive_id().left, car.get_drive_velocity().left);
   dxl.setGoalVelocity(car.get_drive_id().right, car.get_drive_velocity().right);
+  dxl.setGoalVelocity(car.get_claw_id().left, car.get_claw_velocity().left);
+  dxl.setGoalVelocity(car.get_claw_id().right, car.get_claw_velocity().right);
 
   // Turn off the LED after a short delay
   static unsigned long lastMillis = 0;
