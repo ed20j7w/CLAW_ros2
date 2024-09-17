@@ -23,7 +23,7 @@ class ClawLeg:
     height = 0.06
     step_height = 0.04
 
-    shoulder_length = 0.02
+    shoulder_length = -0.02
     thigh_length = 0.05
     shank_length = 0.04
 
@@ -42,9 +42,10 @@ class ClawLeg:
 
     xy_limit = thigh_length + shank_length
 
-    def __init__(self, stage):
+    def __init__(self, stage, side):
         self.stage = stage
         self.enter_cycle_stage(stage)
+        self.shoulder_length = self.shoulder_length*side
 
     def update_cycle(self, stride_percentage):
         self.stride_percentage = stride_percentage
@@ -136,10 +137,10 @@ class StatePublisher(Node):
     update_freq = 500
     stride_percentage = 0
     z_target = 0.01
-    fr_leg = ClawLeg(0)
-    fl_leg = ClawLeg(1)
-    rr_leg = ClawLeg(1)
-    rl_leg = ClawLeg(0)
+    fr_leg = ClawLeg(0, 1)
+    fl_leg = ClawLeg(1, -1)
+    rr_leg = ClawLeg(1, 1)
+    rl_leg = ClawLeg(0, -1)
     
     def __init__(self):
         super().__init__('state_publisher')
@@ -174,9 +175,9 @@ class StatePublisher(Node):
         self.rr_leg.update_cycle(self.stride_percentage)
         self.rl_leg.update_cycle(self.stride_percentage)
         self.fr_leg.set_z(self.fr_leg.shoulder_length + self.z_target)
-        self.fl_leg.set_z(self.fr_leg.shoulder_length + self.z_target)
-        self.rr_leg.set_z(self.fr_leg.shoulder_length + self.z_target)
-        self.rl_leg.set_z(self.fr_leg.shoulder_length + self.z_target)
+        self.fl_leg.set_z(self.fl_leg.shoulder_length + self.z_target)
+        self.rr_leg.set_z(self.rr_leg.shoulder_length + self.z_target)
+        self.rl_leg.set_z(self.rl_leg.shoulder_length + self.z_target)
         self.get_logger().info("fr.s {0} fr.e {1} fr.w {2}".format(self.fr_leg.shoulder, self.fr_leg.elbow, self.fr_leg.wrist))
 
     def publish_states(self):
