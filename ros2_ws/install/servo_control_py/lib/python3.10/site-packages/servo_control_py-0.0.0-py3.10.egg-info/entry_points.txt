@@ -1,3 +1,0 @@
-[console_scripts]
-remote_control = servo_control_py.remote_control:main
-
