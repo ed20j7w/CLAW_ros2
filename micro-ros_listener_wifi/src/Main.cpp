@@ -1,10 +1,12 @@
+// publisher and timer commented out
+
 #include <Arduino.h>
 #include <micro_ros_platformio.h>
 #include <rcl/rcl.h>
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
-#include <std_msgs/msg/int32.h>
 #include <geometry_msgs/msg/twist.h>
+#include <claw_custom_interfaces/msg/robot_data.h>
 
 
 #define RXD1 16
@@ -33,6 +35,12 @@
 // FIXME: Replace with your Wi-Fi credentials.
 #define SSID "JaxHotspot"
 #define SSID_PW "niclavision"
+
+// Publisher
+rcl_publisher_t publisher;
+// claw_custom_interfaces__msg__RobotData msg;
+rcl_timer_t timer;
+
 
 // Subscriber
 static const char *k_twist = "cmd_vel";
@@ -84,7 +92,6 @@ void twist_callback(const void *msg_in) {
   Serial1.print(";");
   Serial1.print(msg->linear.y);
   Serial1.println();
-  
   Serial.print(msg->linear.x);
   Serial.print(",");
   Serial.print(msg->angular.z);
@@ -94,48 +101,46 @@ void twist_callback(const void *msg_in) {
 }
 
 void setup() {
-    // Configure serial transport
-    Serial.begin(115200);
-    Serial.println("Started"); 
+  // Configure serial transport
+  Serial.begin(115200);
+  Serial.println("Started"); 
 
-    // Setup WIFI
-    char ssid[] = SSID;
-    char ssid_pw[] = SSID_PW;
-    // FIXME: Replace with your Wi-Fi credentials. (main ros2 node ip)
-    IPAddress agent_ip(192, 168, 111, 124);
-    const uint16_t k_agent_port = 8888;
-    set_microros_wifi_transports(ssid, ssid_pw, agent_ip, k_agent_port);
-    delay(500);
-    Serial.println("Connected to WIFI");
-    
-    // Initialize the secondary serial port (UART1) for communication with OpenRB150
-    Serial1.begin(9600, SERIAL_8N1, RXD1, TXD1);
-    Serial.println("ESP32 is ready to send messages to OpenRB150.");
+  // Setup WIFI
+  char ssid[] = SSID;
+  char ssid_pw[] = SSID_PW;
+  // FIXME: Replace with your Wi-Fi credentials. (main ros2 node ip)
+  IPAddress agent_ip(192, 168, 213, 124);
+  const uint16_t k_agent_port = 8888;
+  set_microros_wifi_transports(ssid, ssid_pw, agent_ip, k_agent_port);
+  delay(500);
+  Serial.println("Connected to WIFI");
+  
+  // Initialize the secondary serial port (UART1) for communication with OpenRB150
+  Serial1.begin(9600, SERIAL_8N1, RXD1, TXD1);
+  Serial.println("ESP32 is ready to send messages to OpenRB150.");
 
-    // Echo the sent message to the serial monitor via Serial (USB)
-    Serial.println("Message sent to OpenRB150: Hello, OpenRB150!");
+  // Create init_options
+  allocator = rcl_get_default_allocator();
+  rcl_init_options_t init_options = rcl_get_zero_initialized_init_options();
+  RCCHECK(rcl_init_options_init(&init_options, allocator));
+  RCCHECK(rclc_support_init_with_options(&support, 0, NULL, &init_options, &allocator));
 
-    // Create init_options
-    allocator = rcl_get_default_allocator();
-    rcl_init_options_t init_options = rcl_get_zero_initialized_init_options();
-    RCCHECK(rcl_init_options_init(&init_options, allocator));
-    RCCHECK(rclc_support_init_with_options(&support, 0, NULL, &init_options, &allocator));
+  // create node
+  RCCHECK(rclc_node_init_default(&node, "micro_ros_platformio_node", "", &support));
+  
+  // Create twist subscriber.
+  RCCHECK(rclc_subscription_init_best_effort(
+      &subscriber_twist, &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist), k_twist));
 
-    // create node
-    RCCHECK(rclc_node_init_default(&node, "micro_ros_platformio_node", "", &support));
-    
-    // Create twist subscriber.
-    RCCHECK(rclc_subscription_init_best_effort(
-        &subscriber_twist, &node,
-        ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist), k_twist));
-
-    // create executor
-    RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
-    RCCHECK(rclc_executor_add_subscription(
-      &executor, &subscriber_twist, &twist_msg, &twist_callback, ON_NEW_DATA));
+  // create executor
+  RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
+  RCCHECK(rclc_executor_add_subscription(
+    &executor, &subscriber_twist, &twist_msg, &twist_callback, ON_NEW_DATA));
+  // RCCHECK(rclc_executor_add_timer(&executor, &timer));
 }
 
 void loop() {
-    delay(50);
-    RCSOFTCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(50)));
+  delay(30);
+  RCSOFTCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(30)));
 }
